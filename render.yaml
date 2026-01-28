@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: rag-api-service
+    runtime: python
+    pythonVersion: 3.11
+    
+    # Build command - Render runs this before deploy
+    buildCommand: pip install -r requirements.txt
+    
+    # Start command - Render runs this to start your app
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    
+    # Source repository
+    repo: https://github.com/AtharvaBagade23/RAG_Python_Service.git
+    branch: main
+    
+    # Environment variables (set these in Render dashboard)
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    
+    # Auto-deploy on git push
+    autoDeploy: true
+    
+    # Instance type
+    plan: starter  # $7/month for Starter plan
+    
+    # Health check
+    healthCheckPath: /health
+    healthCheckInterval: 30
+
+# Note: Add secret environment variables in Render Dashboard:
+# - OPENAI_API_KEY
+# - PINECONE_API_KEY
+# - PINECONE_ENVIRONMENT
+# - PINECONE_INDEX_NAME
+# - API_SECRET_KEY
+# - ALLOWED_ORIGINS
