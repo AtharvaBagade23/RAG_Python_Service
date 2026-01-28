@@ -18,9 +18,9 @@ router = APIRouter(prefix="/ingest", tags=["Admin"])
 
 # Admin ingest request model
 class AdminIngestRequest(BaseModel):
-    pdf_url: str  # Only need PDF URL from admin
-    dept: str     # Department
-    year: str     # Academic year
+    pdf_url: str  # Cloudinary PDF URL
+    dept: str     # Department (e.g., "Computer")
+    year: str     # Academic year (e.g., "2024")
 
 def validate_admin_token(authorization: Optional[str] = Header(None)) -> dict:
     """
@@ -92,7 +92,7 @@ async def ingest_syllabus(
         # 6. Prepare rich metadata for each chunk
         metadata_list = []
         for chunk_dict in chunks:
-            # Base metadata: only dept and year from admin
+            # Base metadata with only dept and year
             metadata = {
                 "dept": request.dept,
                 "year": request.year,
@@ -116,14 +116,17 @@ async def ingest_syllabus(
             metadata_list=metadata_list
         )
         
+        print(f"[INGEST] Successfully ingested {vectors_stored} vectors for {request.dept} ({request.year})")
+        
         return IngestResponse(
             success=True,
-            message=f"Successfully processed syllabus for {request.dept} ({request.year})",
+            message=f"Successfully processed syllabus for {request.dept} ({request.year}). Stored {vectors_stored} vectors.",
             chunks_processed=len(chunks),
             vectors_stored=vectors_stored
         )
     
     except Exception as e:
+        print(f"[INGEST ERROR] {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("")
