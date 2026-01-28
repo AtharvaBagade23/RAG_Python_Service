@@ -1,26 +1,20 @@
 services:
   - type: web
-    name: rag-api-service
+    name: rag-python-service
     runtime: python
-
-    # Build & start commands
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
-
-    # Source repository
-    repo: https://github.com/AtharvaBagade23/RAG_Python_Service.git
-    branch: main
-
-    # Environment variables
     envVars:
-      - key: PORT
-        value: 8000
-
-    # Auto-deploy on git push
-    autoDeploy: true
-
-    # Instance type
-    plan: starter
-
-    # Health check
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_ENVIRONMENT
+        value: us-east-1
+      - key: PINECONE_INDEX_NAME
+        value: studentpath-syllabus
+      - key: API_SECRET_KEY
+        generateValue: true
     healthCheckPath: /
