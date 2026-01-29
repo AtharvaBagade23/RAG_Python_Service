@@ -12,6 +12,7 @@ from app.services.pdf_service import PDFService
 from app.services.embedding_service import EmbeddingService
 from app.services.pinecone_service import PineconeService
 from app.utils.chunking import chunk_text
+from app.utils.syllabus_parser import SyllabusParser
 from app.config import get_settings
 
 router = APIRouter(prefix="/ingest", tags=["Admin"])
@@ -83,6 +84,24 @@ async def ingest_syllabus(
         if not chunks:
             raise ValueError("No chunks created from PDF")
         
+        # ✅ IMPROVEMENT: Extract structured metadata for each chunk
+        # Automatically detect: semester, course_code, course_name, unit
+        print("[INGEST] Enriching chunks with structured metadata...")
+        enriched_chunks = []
+        for chunk_dict in chunks:
+            enriched_chunk = SyllabusParser.enrich_chunk_metadata(chunk_dict)
+            enriched_chunks.append(enriched_chunk)
+            
+            # Log extracted metadata
+            meta = enriched_chunk.get('metadata', {})
+            sem = meta.get('semester', 'N/A')
+            code = meta.get('course_code', 'N/A')
+            name = meta.get('course_name', 'N/A')
+            unit = meta.get('unit', 'N/A')
+            print(f"  → Semester: {sem}, Code: {code}, Name: {name}, Unit: {unit}")
+        
+        chunks = enriched_chunks
+        
         # 4. Extract text content for embedding
         chunk_texts = [chunk['text'] for chunk in chunks]
         
@@ -92,7 +111,7 @@ async def ingest_syllabus(
         # 6. Prepare rich metadata for each chunk
         metadata_list = []
         for chunk_dict in chunks:
-            # Base metadata with only dept and year
+            # Base metadata with dept and year
             metadata = {
                 "dept": request.dept,
                 "year": request.year,
@@ -104,9 +123,23 @@ async def ingest_syllabus(
                 "chunk_size": chunk_dict.get('size', 0)
             }
             
-            # Add extracted course information from PDF content
-            if chunk_dict.get('metadata'):
-                metadata.update(chunk_dict['metadata'])
+            # ✅ IMPROVEMENT 1: Add SEMESTER (if detected)
+            if chunk_dict.get('metadata', {}).get('semester'):
+                metadata["semester"] = chunk_dict['metadata']['semester']
+            
+            # ✅ IMPROVEMENT 2: Add COURSE CODE + COURSE NAME (if detected)
+            if chunk_dict.get('metadata', {}).get('course_code'):
+                metadata["course_code"] = chunk_dict['metadata']['course_code']
+            if chunk_dict.get('metadata', {}).get('course_name'):
+                metadata["course_name"] = chunk_dict['metadata']['course_name']
+            
+            # ✅ IMPROVEMENT 3: Add UNIT NUMBER (if detected)
+            if chunk_dict.get('metadata', {}).get('unit'):
+                metadata["unit"] = chunk_dict['metadata']['unit']
+            
+            # Add section type if available
+            if chunk_dict.get('metadata', {}).get('section_type'):
+                metadata["section_type"] = chunk_dict['metadata']['section_type']
             
             metadata_list.append(metadata)
         
